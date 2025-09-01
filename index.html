@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grooming Guess Game</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .info-section {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #555;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .timer {
+      font-size: 24px;
+      font-weight: bold;
+      color: #d9534f;
+      margin-bottom: 15px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .controls button {
+      padding: 8px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #startButton {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    #stopButton {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .topics-container {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .topic-card {
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      text-align: center;
+      min-width: 120px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .topic-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .topic-card.selected {
+      background: #4a90e2;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    input {
+      padding: 10px;
+      width: 250px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #4a90e2;
+      outline: none;
+      margin-bottom: 20px;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      border-color: #007BFF;
+      box-shadow: 0 0 8px rgba(0, 123, 255, 0.4);
+    }
+
+    .blocks-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 650px; /* Adjust max-width to control columns */
+    }
+
+    .block {
+      width: 140px; /* Set a fixed width for the blocks */
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.5s ease;
+      opacity: 0.6;
+    }
+
+    .block.filled {
+      background: #4CAF50;
+      color: #fff;
+      opacity: 1;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>✨ Grooming Guess Game ✨</h1>
+  <div class="info-section">
+    <div class="timer" id="timer">60s</div>
+    <div class="controls">
+      <button id="startButton">Start</button>
+      <button id="stopButton">Stop</button>
+    </div>
+  </div>
+
+  <div class="topics-container">
+    <div class="topic-card" data-topic="hair">Hair Care</div>
+    <div class="topic-card" data-topic="face">Face Care</div>
+    <div class="topic-card" data-topic="oral">Oral Care</div>
+    <div class="topic-card" data-topic="body">Body & Others</div>
+  </div>
+
+  <input type="text" id="guessInput" placeholder="Select a topic to start..." disabled>
+
+  <div class="blocks-container" id="blocksContainer">
+    </div>
+
+  <script>
+    const topicWords = {
+      hair: ["Shampoo", "Conditioner", "Hair Gel", "Comb", "Hair Dryer", "Hair Brush", "Hair Serum", "Dry Shampoo", "Hair Mousse", "Hair Spray"],
+      face: ["Face Wash", "Moisturizer", "Sunscreen", "Lip Balm", "Face Mask", "Exfoliator", "Toner", "Serum", "Acne Cream", "Eye Cream"],
+      oral: ["Toothpaste", "Toothbrush", "Mouthwash", "Dental Floss", "Tongue Scraper", "Teeth Whitening", "Orthodontic Wax", "Retainer Case", "Electric Toothbrush", "Floss Picks"],
+      body: ["Soap", "Deodorant", "Body Lotion", "Body Wash", "Body Oil", "Nail Clipper", "Perfume", "Cologne", "Hand Cream", "Foot Cream"]
+    };
+
+    const blocksContainer = document.getElementById("blocksContainer");
+    const input = document.getElementById("guessInput");
+    const timerDisplay = document.getElementById("timer");
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+    const topicCards = document.querySelectorAll(".topic-card");
+
+    // Create 20 empty blocks
+    for (let i = 0; i < 20; i++) {
+      const div = document.createElement("div");
+      div.classList.add("block");
+      div.innerText = "—";
+      blocksContainer.appendChild(div);
+    }
+
+    const blocks = document.querySelectorAll(".block");
+    let filledCount = 0;
+    let timeLeft = 60;
+    let timerInterval;
+    let selectedTopic = null;
+    let gameStarted = false;
+
+    function startGame() {
+      if (!selectedTopic) {
+        alert("Please select a topic to start the game.");
+        return;
+      }
+      if (gameStarted) return;
+      gameStarted = true;
+      input.disabled = false;
+      input.placeholder = "Type your guess...";
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      timerDisplay.style.color = "#d9534f";
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.innerText = `${timeLeft}s`;
+
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function stopGame() {
+      if (!gameStarted) return;
+      clearInterval(timerInterval);
+      input.disabled = true;
+      input.placeholder = "Game stopped.";
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      gameStarted = false;
+      timerDisplay.style.color = "#333";
+    }
+
+    function resetGame() {
+      stopGame();
+      timeLeft = 60;
+      filledCount = 0;
+      timerDisplay.innerText = "60s";
+      input.value = "";
+      input.placeholder = "Select a topic to start...";
+      input.disabled = true;
+      startButton.disabled = false;
+      stopButton.disabled = false;
+      selectedTopic = null;
+      topicCards.forEach(card => card.classList.remove("selected"));
+      blocks.forEach(block => {
+        block.innerText = "—";
+        block.classList.remove("filled");
+      });
+    }
+
+    startButton.addEventListener("click", startGame);
+    stopButton.addEventListener("click", stopGame);
+
+    topicCards.forEach(card => {
+      card.addEventListener("click", () => {
+        if (!gameStarted) {
+          topicCards.forEach(c => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedTopic = card.dataset.topic;
+          input.disabled = false;
+          input.placeholder = `Guess a ${card.innerText} word...`;
+        }
+      });
+    });
+
+    input.addEventListener("keyup", (e) => {
+      if (e.key === "Enter" && gameStarted && filledCount < 20) {
+        const guess = input.value.trim().toLowerCase();
+        input.value = "";
+
+        if (!guess) return;
+
+        // Use the words from the selected topic's array
+        const itemsToSearch = topicWords[selectedTopic] || [];
+        const matches = itemsToSearch.filter(item =>
+          item.toLowerCase().includes(guess)
+        );
+
+        if (matches.length > 0) {
+          // pick one random match
+          const randomMatch = matches[Math.floor(Math.random() * matches.length)];
+
+          // find empty blocks
+          const emptyBlocks = Array.from(blocks).filter(b => !b.classList.contains("filled"));
+
+          if (emptyBlocks.length > 0) {
+            // pick random empty block
+            const randomBlock = emptyBlocks[Math.floor(Math.random() * emptyBlocks.length)];
+
+            randomBlock.innerText = randomMatch;
+            randomBlock.classList.add("filled");
+            filledCount++;
+
+            // Check for game win
+            if (filledCount === 20) {
+              endGame();
+              input.placeholder = "You won!";
+            }
+          }
+        }
+      }
+    });
+
+    function endGame() {
+      stopGame();
+      input.placeholder = "Time's up!";
+      timerDisplay.innerText = "Game Over!";
+      // You could also add a reset button or logic here
+    }
+
+    // Initialize game state on load
+    stopButton.disabled = true;
+
+  </script>
+</body>
+</html>
